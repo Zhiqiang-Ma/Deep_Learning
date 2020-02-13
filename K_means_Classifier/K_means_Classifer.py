@@ -8,8 +8,8 @@ import nltk
 from bs4 import BeautifulSoup
 import re
 import os
-#import codecs
-#import mpld3
+
+#%% download the films data
 #加载影片数据
 titles = open('C:/Users/Administrator/Desktop/NLTK code post/week8_data/title_list.txt').read().split('\n')
 titles = titles[:100]
@@ -19,6 +19,7 @@ links = links[:100]
 synopses_wiki = open('C:/Users/Administrator/Desktop/NLTK code post/week8_data/synopses_list_wiki.txt',encoding='utf-8').read().split('\n')
 synopses_wiki = synopses_wiki[:100]
 
+#%% text clean procession
 #数据清洗，获取html代码中的文本内容
 synopses_clean_wiki = []
 for text in synopses_wiki:
@@ -26,7 +27,6 @@ for text in synopses_wiki:
 #    strips html formatting and converts to unicode
     synopses_clean_wiki.append(text)    
 synopses_wiki = synopses_clean_wiki
-
 genres = open('C:/Users/Administrator/Desktop/NLTK code post/week8_data/genres_list.txt').read().split('\n')
 genres = genres[:100]
 
@@ -54,9 +54,7 @@ for i in range(len(synopses_wiki)):
 #为每个项目生成索引的全集(在本例中它只是排名),以后我将使用这个得分
 ranks = []
 for i in range(0,len(titles)):
-    ranks.append(i)    
-
-#%%   
+    ranks.append(i)     
 # 载入 nltk 的英文停用词作为“stopwords”变量
 stopwords = nltk.corpus.stopwords.words('english')
 #print (stopwords[:10])
@@ -99,7 +97,7 @@ vocab_frame = pd.DataFrame({'words': totalvocab_tokenized}, index = totalvocab_s
 #print ('there are ' + str(vocab_frame.shape[0]) + ' items in vocab_frame')
 #print (vocab_frame.head())
 
-#%%
+#%% more details， please refer to ::
 # 定义向量化参数
 from sklearn.feature_extraction.text import TfidfVectorizer
 tfidf_vectorizer = TfidfVectorizer(max_df=0.8, max_features=200000,
@@ -107,22 +105,20 @@ tfidf_vectorizer = TfidfVectorizer(max_df=0.8, max_features=200000,
                                  use_idf=True, tokenizer=tokenize_and_stem, ngram_range=(1,3))
 
 tfidf_matrix = tfidf_vectorizer.fit_transform(synopses) # 向量化剧情简介文本
-print(tfidf_matrix.shape)
+#print(tfidf_matrix.shape)
 terms = tfidf_vectorizer.get_feature_names()
 from sklearn.metrics.pairwise import cosine_similarity
 dist = 1 - cosine_similarity(tfidf_matrix)
 
-#%%
-##k-means聚类
+#%%  k-means聚类
 from sklearn.cluster import KMeans
 num_clusters = 5
 km = KMeans(n_clusters=num_clusters)
 km.fit(tfidf_matrix)
 clusters = km.labels_.tolist()
 
-# 存储你的模型
+# 存储已经训练好的模型 km
 from sklearn.externals import joblib
-# 因为我已经从 pickle 载入过模型了
 joblib.dump(km, 'doc_cluster.pkl')
 km = joblib.load('doc_cluster.pkl')
 clusters = km.labels_.tolist()
@@ -130,14 +126,15 @@ clusters = km.labels_.tolist()
 films = { 'title': titles, 'rank': ranks, 'synopsis': synopses, 'cluster': clusters, 'genre': genres }
 frame = pd.DataFrame(films, index = [clusters] , columns = ['rank', 'title', 'cluster', 'genre'])
 frame['cluster'].value_counts()
+
+# see more details of groupby, refer to the following URL.
+# https://www.tutorialspoint.com/python_pandas/python_pandas_groupby.htm
 grouped = frame['rank'].groupby(frame['cluster']) # 为了凝聚（aggregation），由聚类分类。
 grouped.mean() # 每个聚类的平均排名（1 到 100）
 
 print("Top terms per cluster:")
-print()
 # 按离质心的距离排列聚类中心，由近到远
 order_centroids = km.cluster_centers_.argsort()[:, ::-1] 
-
 for i in range(num_clusters):
     print("Cluster %d words:" % i, end='')
     for ind in order_centroids[i, :6]: # 每个聚类选 6 个词
@@ -153,9 +150,9 @@ for i in range(num_clusters):
          
 #%%    
 ##多维尺度分析MDS    
-import os  # 为了使用 os.path.basename 函数
+#import os  # 为了使用 os.path.basename 函数
 import matplotlib.pyplot as plt
-import matplotlib as mpl
+#import matplotlib as mpl
 from sklearn.manifold import MDS
 MDS()
 # 将二位平面中绘制的点转化成两个元素（components）
@@ -213,7 +210,8 @@ plt.show() # 展示绘图
 # 以下注释语句可以保存需要的绘图
 #plt.savefig('clusters_small_noaxes.png', dpi=200)
 plt.close()
-##层次聚类
+
+#%% 层次聚类
 from scipy.cluster.hierarchy import ward, dendrogram
 linkage_matrix = ward(dist) # 聚类算法处理之前计算得到的距离，用 linkage_matrix 表示
 fig, ax = plt.subplots(figsize=(15, 20)) # 设置大小
@@ -227,6 +225,6 @@ plt.tick_params(
 
 plt.tight_layout() # 展示紧凑的绘图布局
 # 注释语句用来保存图片
-plt.savefig('ward_clusters.png', dpi=200) # 保存图片为 ward_clusters
-
+#plt.savefig('ward_clusters.png', dpi=200) # 保存图片为 ward_clusters
+plt.show() # 展示绘图
 plt.close()                 
